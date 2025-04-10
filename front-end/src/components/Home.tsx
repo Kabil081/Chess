@@ -1,15 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
 import { Chess } from 'chess.js';
 import { Settings, ChevronDown, Search, Moon, HelpCircle, Trophy, BookOpen } from 'lucide-react';
-
 const LIGHT_SQUARE = '#EBECD0';
 const DARK_SQUARE = '#739552';
-
 export default function ChessApp() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [email, setEmail] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [chess, setChess] = useState(new Chess());
   const [playerColor, setPlayerColor] = useState('w');
   const [selectedSquare, setSelectedSquare] = useState(null);
@@ -93,6 +94,18 @@ export default function ChessApp() {
           setIsAuthenticated(false);
         }
         break;
+      
+      case 'signup_response':
+        if (message.success) {
+          console.log('Signup successful!');
+          setIsAuthenticated(true);
+          setAuthError('');
+          setIsSigningUp(false);
+        } else {
+          console.error('Signup failed:', message.message);
+          setAuthError(message.message || 'Signup failed');
+        }
+        break;
         
       case 'init_game':
         if (message.payload?.color) {
@@ -161,6 +174,44 @@ export default function ChessApp() {
     
     console.log('Sending authentication request...');
     socketRef.current.send(JSON.stringify(authMessage));
+  };
+  
+  const handleSignup = (e) => {
+    e.preventDefault();
+    
+    // Validate form fields
+    if (!username || !password || !confirmPassword || !email) {
+      setAuthError('All fields are required');
+      return;
+    }
+    
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      setAuthError('Passwords do not match');
+      return;
+    }
+    
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setAuthError('Please enter a valid email address');
+      return;
+    }
+    
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setAuthError('Not connected to server. Please try again.');
+      return;
+    }
+    
+    const signupMessage = {
+      type: 'signup',
+      username: username,
+      password: password,
+      email: email
+    };
+    
+    console.log('Sending signup request...');
+    socketRef.current.send(JSON.stringify(signupMessage));
   };
   
   const startGame = () => {
@@ -337,6 +388,14 @@ export default function ChessApp() {
     );
   };
   
+  const renderAuthForm = () => {
+    if (isSigningUp) {
+      return renderSignupForm();
+    } else {
+      return renderLoginForm();
+    }
+  };
+  
   const renderLoginForm = () => {
     return (
       <div className="bg-gray-700 p-6 rounded-lg shadow-lg w-96">
@@ -381,7 +440,105 @@ export default function ChessApp() {
         
         <div className="mt-4 text-center">
           <p className="text-gray-400">
-            Don't have an account? <a href="#" className="text-green-400 hover:text-green-300">Sign up</a>
+            Don't have an account? <button 
+              onClick={() => {
+                setIsSigningUp(true);
+                setAuthError('');
+              }} 
+              className="text-green-400 hover:text-green-300"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
+        
+        <div className="mt-6 text-center">
+          <span className={`text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+            {isConnected ? 'Connected to server' : 'Disconnected from server'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+  
+  const renderSignupForm = () => {
+    return (
+      <div className="bg-gray-700 p-6 rounded-lg shadow-lg w-96">
+        <h2 className="text-white text-2xl font-bold mb-6 text-center">Sign up for Chess.io</h2>
+        
+        {authError && (
+          <div className="bg-red-600 text-white p-3 rounded-md mb-4 text-sm">
+            {authError}
+          </div>
+        )}
+        
+        <form onSubmit={handleSignup} className="space-y-4">
+          <div>
+            <label className="block text-gray-300 mb-1">Username</label>
+            <input 
+              type="text" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Choose a username"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 mb-1">Email</label>
+            <input 
+              type="email" 
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="your@email.com"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 mb-1">Password</label>
+            <input 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="••••••••"
+            />
+            <p className="text-gray-400 text-xs mt-1">
+              At least 8 characters with letters and numbers
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 mb-1">Confirm Password</label>
+            <input 
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="••••••••"
+            />
+          </div>
+          
+          <button 
+            type="submit"
+            className="w-full p-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors duration-200"
+          >
+            Create Account
+          </button>
+        </form>
+        
+        <div className="mt-4 text-center">
+          <p className="text-gray-400">
+            Already have an account? <button 
+              onClick={() => {
+                setIsSigningUp(false);
+                setAuthError('');
+              }} 
+              className="text-green-400 hover:text-green-300"
+            >
+              Login
+            </button>
           </p>
         </div>
         
@@ -567,7 +724,7 @@ export default function ChessApp() {
               </div>
             </div>
           ) : (
-            renderLoginForm()
+            renderAuthForm()
           )}
         </div>
         {isAuthenticated && (
@@ -591,7 +748,6 @@ export default function ChessApp() {
                 <div className="w-4 h-4 bg-green-500 rounded-full ml-auto"></div>
               </div>
             </div>
-            
             <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-white font-semibold">Game Options</span>

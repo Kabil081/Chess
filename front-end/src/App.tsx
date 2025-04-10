@@ -7,12 +7,9 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 function App() {
-  // Check if user is logged in
   const isAuthenticated = (): boolean => {
     return localStorage.getItem('chessUser') !== null;
   };
-
-  // Protected route component
   const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     if (!isAuthenticated()) {
       return <Navigate to="/login" />;
@@ -38,5 +35,4 @@ function App() {
     </Router>
   );
 }
-
 export default App;
