@@ -1,16 +1,40 @@
+import React from 'react';
 import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate} from 'react-router-dom';
 import ChessApp from './components/Home';
-import LandingPage from "./screens/LandingPage"
-import Game from './screens/Game';
+import Login from './components/Login';
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+}
 function App() {
+  // Check if user is logged in
+  const isAuthenticated = (): boolean => {
+    return localStorage.getItem('chessUser') !== null;
+  };
+
+  // Protected route component
+  const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+    if (!isAuthenticated()) {
+      return <Navigate to="/login" />;
+    }
+    return <>{children}</>;
+  };
+
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<ChessApp />} />
-        <Route path="/game" element={<Game/>}/>
-        <Route path="landingPage" element={<LandingPage/>}/>
-      </Routes>
+      <div className="App">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route 
+            path="/" 
+            element={
+              <ProtectedRoute>
+                <ChessApp />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </div>
     </Router>
   );
 }

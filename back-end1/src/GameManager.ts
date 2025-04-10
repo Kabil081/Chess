@@ -11,26 +11,17 @@ export class GameManager {
     constructor() {}
 
     addUser(socket: AuthenticatedSocket): void {
-        // Socket is added but not yet authenticated
         this.setupSocketHandlers(socket);
-        
-        // Send a welcome message
         socket.send(JSON.stringify({
             type: "welcome",
             message: "Connected to Chess.io server. Please authenticate."
         }));
     }
-
     removeUser(socket: AuthenticatedSocket): void {
-        // Remove from authenticated users if present
         if (socket.username) {
             this.users.delete(socket.username);
-            
-            // Also remove from pending queue if present
             this.pendingUsers.delete(socket.username);
         }
-        
-        // Remove any inactive games
         this.cleanupGames();
     }
 
@@ -60,7 +51,7 @@ export class GameManager {
                         break;
                         
                     case "move":
-                        // Only allow authenticated users to make moves
+                       
                         if (socket.isAuthenticated) {
                             this.handleMove(socket, message.move);
                         } else {
@@ -118,7 +109,6 @@ export class GameManager {
         const authResult = await authenticateUser(username, password);
         
         if (authResult.success) {
-            // Check if user is already connected
             if (this.users.has(username)) {
                 socket.send(JSON.stringify({
                     type: "auth_response",
@@ -128,11 +118,9 @@ export class GameManager {
                 return;
             }
             
-            // Set authentication on socket
             socket.username = username;
             socket.isAuthenticated = true;
             
-            // Add to authenticated users
             this.users.set(username, socket);
             
             socket.send(JSON.stringify({
@@ -158,13 +146,11 @@ export class GameManager {
             return;
         }
         
-        // Check if user is already in a pending state
         if (this.pendingUsers.has(socket.username)) {
             console.log(`User ${socket.username} already waiting for opponent`);
             return;
         }
         
-        // Check if user is already in an active game
         const existingGame = this.findGameBySocket(socket);
         if (existingGame && existingGame.isActive()) {
             console.log(`User ${socket.username} already in an active game`);
@@ -174,8 +160,6 @@ export class GameManager {
             }));
             return;
         }
-        
-        // Find opponent (first pending user that isn't this user)
         let opponentUsername: string | null = null;
         let opponentSocket: AuthenticatedSocket | null = null;
         
@@ -191,8 +175,6 @@ export class GameManager {
             console.log(`Creating new game between ${socket.username} and ${opponentUsername}`);
             const newGame = new Game(opponentSocket, socket);
             this.games.push(newGame);
-            
-            // Remove opponent from pending users
             this.pendingUsers.delete(opponentUsername);
             
             socket.send(JSON.stringify({
@@ -205,7 +187,7 @@ export class GameManager {
                 opponent: socket.username
             }));
         } else {
-            // Add this user to pending queue
+        
             console.log(`User ${socket.username} waiting for opponent`);
             this.pendingUsers.set(socket.username, socket);
             
@@ -220,8 +202,7 @@ export class GameManager {
             console.error("Invalid move format");
             return;
         }
-        
-        // Find the game this user is in
+    
         const game = this.findGameBySocket(socket);
         
         if (game) {

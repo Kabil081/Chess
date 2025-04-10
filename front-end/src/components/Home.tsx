@@ -6,6 +6,10 @@ const LIGHT_SQUARE = '#EBECD0';
 const DARK_SQUARE = '#739552';
 
 export default function ChessApp() {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState('');
   const [chess, setChess] = useState(new Chess());
   const [playerColor, setPlayerColor] = useState('w');
   const [selectedSquare, setSelectedSquare] = useState(null);
@@ -15,7 +19,6 @@ export default function ChessApp() {
   const [possibleMoves, setPossibleMoves] = useState([]);
   const [lastMove, setLastMove] = useState(null);
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
-  
   const socketRef = useRef(null);
   const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -33,22 +36,17 @@ export default function ChessApp() {
     'bq': 'https://assets-themes.chess.com/image/ejgfv/150/bq.png',
     'bk': 'https://assets-themes.chess.com/image/ejgfv/150/bk.png',
   };
-
-  // Connect to WebSocket when component mounts
+  
   useEffect(() => {
     const connectWebSocket = () => {
       socketRef.current = new WebSocket('ws://localhost:8080');
-      
       socketRef.current.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
       };
-      
       socketRef.current.onmessage = (event) => {
         try {
           console.log('Received message:', event.data);
-          
-          // Handle simple string messages from server
           if (typeof event.data === 'string' && !event.data.startsWith('{')) {
             console.log('Server message:', event.data);
             return;
@@ -64,36 +62,45 @@ export default function ChessApp() {
       socketRef.current.onclose = () => {
         console.log('WebSocket disconnected');
         setIsConnected(false);
-        // Try to reconnect after a delay
         setTimeout(connectWebSocket, 3000);
       };
-      
       socketRef.current.onerror = (error) => {
         console.error('WebSocket error:', error);
       };
     };
-    
     connectWebSocket();
-    
     return () => {
       if (socketRef.current) {
         socketRef.current.close();
       }
     };
   }, []);
-
-  // Handle incoming WebSocket messages
+  
   const handleWebSocketMessage = (message) => {
     console.log('Handling message:', message);
-    
     switch (message.type) {
+      case 'welcome':
+        console.log('Received welcome message from server');
+        break;
+      case 'auth_response':
+        if (message.success) {
+          console.log('Authentication successful!');
+          setIsAuthenticated(true);
+          setAuthError('');
+        } else {
+          console.error('Authentication failed:', message.message);
+          setAuthError(message.message || 'Authentication failed');
+          setIsAuthenticated(false);
+        }
+        break;
+        
       case 'init_game':
         if (message.payload?.color) {
           const color = message.payload.color === 'white' ? 'w' : 'b';
           setPlayerColor(color);
           setGameStatus('playing');
           setWaitingForOpponent(false);
-          setChess(new Chess()); // Reset the chess game
+          setChess(new Chess()); 
           setPossibleMoves([]);
           setSelectedSquare(null);
           setLastMove(null);
@@ -105,8 +112,6 @@ export default function ChessApp() {
         if (message.payload) {
           const { from, to } = message.payload;
           console.log(`Opponent moved from ${from} to ${to}`);
-          
-          // Apply the opponent's move to our board
           applyMove(from, to);
           setLastMove({ from, to });
         }
@@ -117,13 +122,53 @@ export default function ChessApp() {
         setGameResult(message.payload?.winner || 'Game Over');
         break;
         
+      case 'waiting_for_opponent':
+        setWaitingForOpponent(true);
+        console.log('Waiting for an opponent to join...');
+        break;
+        
+      case 'game_found':
+        console.log(`Found opponent: ${message.opponent}`);
+        break;
+        
+      case 'error':
+        console.error('Received error from server:', message.message);
+        break;
+
       default:
         console.log('Received unknown message type:', message);
     }
   };
-
-  // Start a new game
+  
+  const handleLogin = (e) => {
+    e.preventDefault();
+    
+    if (!username || !password) {
+      setAuthError('Username and password are required');
+      return;
+    }
+    
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setAuthError('Not connected to server. Please try again.');
+      return;
+    }
+    
+    const authMessage = {
+      type: 'auth',
+      username: username,
+      password: password
+    };
+    
+    console.log('Sending authentication request...');
+    socketRef.current.send(JSON.stringify(authMessage));
+  };
+  
   const startGame = () => {
+    if (!isAuthenticated) {
+      console.error('Must be authenticated to start a game');
+      return;
+    }
+    
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       console.error('WebSocket not connected');
       return;
@@ -132,7 +177,6 @@ export default function ChessApp() {
     const message = {
       type: 'init_game'
     };
-    
     socketRef.current.send(JSON.stringify(message));
     setGameStatus('waiting');
     setGameResult(null);
@@ -143,8 +187,7 @@ export default function ChessApp() {
     setWaitingForOpponent(true);
     console.log('Sent init_game request, waiting for opponent...');
   };
-
-  // Apply a move to the board
+  
   const applyMove = (from, to) => {
     setChess((currentChess) => {
       const newChess = new Chess(currentChess.fen());
@@ -152,7 +195,7 @@ export default function ChessApp() {
         const moveResult = newChess.move({
           from: from,
           to: to,
-          promotion: 'q' // Auto-promote to queen for simplicity
+          promotion: 'q' 
         });
         
         console.log('Move applied:', moveResult);
@@ -293,7 +336,64 @@ export default function ChessApp() {
       </div>
     );
   };
-
+  
+  const renderLoginForm = () => {
+    return (
+      <div className="bg-gray-700 p-6 rounded-lg shadow-lg w-96">
+        <h2 className="text-white text-2xl font-bold mb-6 text-center">Login to Chess.io</h2>
+        
+        {authError && (
+          <div className="bg-red-600 text-white p-3 rounded-md mb-4 text-sm">
+            {authError}
+          </div>
+        )}
+        
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-gray-300 mb-1">Username</label>
+            <input 
+              type="text" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="Enter your username"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-gray-300 mb-1">Password</label>
+            <input 
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              placeholder="••••••••"
+            />
+          </div>
+          
+          <button 
+            type="submit"
+            className="w-full p-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors duration-200"
+          >
+            Login
+          </button>
+        </form>
+        
+        <div className="mt-4 text-center">
+          <p className="text-gray-400">
+            Don't have an account? <a href="#" className="text-green-400 hover:text-green-300">Sign up</a>
+          </p>
+        </div>
+        
+        <div className="mt-6 text-center">
+          <span className={`text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+            {isConnected ? 'Connected to server' : 'Disconnected from server'}
+          </span>
+        </div>
+      </div>
+    );
+  };
+  
   const renderBoard = () => {
     const boardOrientation = playerColor === 'b' ? 'black' : 'white';
     const ranks = boardOrientation === 'black' ? [...rankLabels].reverse() : rankLabels;
@@ -364,8 +464,7 @@ export default function ChessApp() {
       </div>
     );
   };
-
-  // Render game status
+  
   const renderGameStatus = () => {
     if (gameStatus === 'waiting' || waitingForOpponent) {
       return (
@@ -390,8 +489,7 @@ export default function ChessApp() {
     }
     return null;
   };
-
-  // Navigation item component
+  
   const NavItem = ({ icon, color, label }) => (
     <div className={`flex items-center gap-3 p-3 hover:bg-gray-700 rounded-md transition-colors duration-200 cursor-pointer ${label === 'Play' ? 'bg-gray-700' : ''}`}>
       <div className={`text-${color}-500`}>{icon}</div>
@@ -401,7 +499,6 @@ export default function ChessApp() {
 
   return (
     <div className="flex h-screen bg-gray-900">
-      {/* Left sidebar */}
       <div className="w-56 bg-gray-800 flex flex-col p-4 shadow-xl">
         <div className="p-2">
           <div className="flex items-center gap-2 mb-8">
@@ -450,121 +547,123 @@ export default function ChessApp() {
       {/* Main content */}
       <div className="flex-1 flex">
         <div className="flex-1 p-6 flex justify-center items-center bg-gradient-to-br from-gray-900 to-gray-800">
-          <div className="flex flex-col">
-            <div className="flex justify-between items-center mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">D</div>
-                <span className="text-white font-semibold">Opponent (400)</span>
-                <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-              </div>
-              <Settings className="text-gray-400 hover:text-white cursor-pointer transition-colors duration-200" size={22} />
-            </div>
-            
-            {renderBoard()}
-            {renderGameStatus()}
-            
-            <div className="flex items-center mt-4">
-              <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold">Y</div>
-              <span className="text-white ml-3 font-semibold">You</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Right sidebar */}
-        <div className="w-80 bg-gray-800 p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-              <div className="bg-blue-500 p-2 rounded-md text-white">
-                🤖
-              </div>
-              <span className="text-white font-semibold text-lg">Play Online</span>
-            </div>
-          </div>
-          
-          <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">O</div>
-              <div>
-                <span className="text-white font-semibold block">Opponent</span>
-                <span className="text-gray-400 text-sm">Rating: 400</span>
-              </div>
-              <div className="w-4 h-4 bg-green-500 rounded-full ml-auto"></div>
-            </div>
-          </div>
-          
-          <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-white font-semibold">Game Options</span>
-              <span className="text-gray-300 text-sm">Standard</span>
-            </div>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Time Control</span>
-                <span className="text-white">10 min</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Increment</span>
-                <span className="text-white">5 sec</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-300">Rated</span>
-                <span className="text-white">Yes</span>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
-            <div className="flex justify-between items-center">
-              <span className="text-white font-semibold">Game Status</span>
-            </div>
-            <div className="mt-3 space-y-2">
-              <div className="flex justify-between items-center p-2 bg-gray-600 rounded-md">
-                <span className="text-white">Moves: {Math.floor(chess.history().length / 2)}</span>
-                <span className="text-white">Turn: {chess.turn() === 'w' ? 'White' : 'Black'}</span>
-              </div>
-              {chess.isCheck() && (
-                <div className="flex justify-center items-center p-2 bg-red-600 rounded-md">
-                  <span className="text-white font-bold">CHECK!</span>
+          {isAuthenticated ? (
+            <div className="flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">D</div>
+                  <span className="text-white font-semibold">Opponent (400)</span>
+                  <div className="w-4 h-4 bg-green-500 rounded-full"></div>
                 </div>
-              )}
-              {lastMove && (
+                <Settings className="text-gray-400 hover:text-white cursor-pointer transition-colors duration-200" size={22} />
+              </div>
+              
+              {renderBoard()}
+              {renderGameStatus()}
+              
+              <div className="flex items-center mt-4">
+                <div className="w-10 h-10 bg-gray-500 rounded-full flex items-center justify-center text-white font-bold">Y</div>
+                <span className="text-white ml-3 font-semibold">{username}</span>
+              </div>
+            </div>
+          ) : (
+            renderLoginForm()
+          )}
+        </div>
+        {isAuthenticated && (
+          <div className="w-80 bg-gray-800 p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <div className="bg-blue-500 p-2 rounded-md text-white">
+                  🤖
+                </div>
+                <span className="text-white font-semibold text-lg">Play Online</span>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">O</div>
+                <div>
+                  <span className="text-white font-semibold block">Opponent</span>
+                  <span className="text-gray-400 text-sm">Rating: 400</span>
+                </div>
+                <div className="w-4 h-4 bg-green-500 rounded-full ml-auto"></div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-white font-semibold">Game Options</span>
+                <span className="text-gray-300 text-sm">Standard</span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Time Control</span>
+                  <span className="text-white">10 min</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Increment</span>
+                  <span className="text-white">5 sec</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-300">Rated</span>
+                  <span className="text-white">Yes</span>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
+              <div className="flex justify-between items-center">
+                <span className="text-white font-semibold">Game Status</span>
+              </div>
+              <div className="mt-3 space-y-2">
                 <div className="flex justify-between items-center p-2 bg-gray-600 rounded-md">
-                  <span className="text-white">Last move:</span>
-                  <span className="text-white font-bold">{lastMove.from} → {lastMove.to}</span>
+                  <span className="text-white">Moves: {Math.floor(chess.history().length / 2)}</span>
+                  <span className="text-white">Turn: {chess.turn() === 'w' ? 'White' : 'Black'}</span>
                 </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between mt-8 mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-white">Preferred side:</span>
-              <div className="flex gap-2">
-                <div 
-                  className={`w-8 h-8 ${playerColor === 'w' ? 'border-2 border-green-500' : 'border-2 border-gray-600'} bg-white rounded-md cursor-pointer`}
-                  onClick={() => setPlayerColor('w')}
-                ></div>
-                <div 
-                  className={`w-8 h-8 ${playerColor === 'b' ? 'border-2 border-green-500' : 'border-2 border-gray-600'} bg-gray-800 rounded-md cursor-pointer`}
-                  onClick={() => setPlayerColor('b')}
-                ></div>
+                {chess.isCheck() && (
+                  <div className="flex justify-center items-center p-2 bg-red-600 rounded-md">
+                    <span className="text-white font-bold">CHECK!</span>
+                  </div>
+                )}
+                {lastMove && (
+                  <div className="flex justify-between items-center p-2 bg-gray-600 rounded-md">
+                    <span className="text-white">Last move:</span>
+                    <span className="text-white font-bold">{lastMove.from} → {lastMove.to}</span>
+                  </div>
+                )}
+              </div>
+            </div>          
+            <div className="flex items-center justify-between mt-8 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="text-white">Preferred side:</span>
+                <div className="flex gap-2">
+                  <div 
+                    className={`w-8 h-8 ${playerColor === 'w' ? 'border-2 border-green-500' : 'border-2 border-gray-600'} bg-white rounded-md cursor-pointer`}
+                    onClick={() => setPlayerColor('w')}
+                  ></div>
+                  <div 
+                    className={`w-8 h-8 ${playerColor === 'b' ? 'border-2 border-green-500' : 'border-2 border-gray-600'} bg-gray-800 rounded-md cursor-pointer`}
+                    onClick={() => setPlayerColor('b')}
+                  ></div>
+                </div>
               </div>
             </div>
+            <button 
+              className={`w-full p-4 rounded-md font-bold text-white ${waitingForOpponent ? 'bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} transition-colors duration-200 shadow-lg`}
+              onClick={startGame}
+              disabled={waitingForOpponent}
+            >
+              {waitingForOpponent ? "Waiting for opponent..." : "Find Match"}
+            </button>
+            <div className="mt-6 text-center">
+              <span className={`text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+                {isConnected ? 'Connected to server' : 'Disconnected from server'}
+              </span>
+            </div>
           </div>
-          <button 
-            className={`w-full p-4 rounded-md font-bold text-white ${waitingForOpponent ? 'bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} transition-colors duration-200 shadow-lg`}
-            onClick={startGame}
-            disabled={waitingForOpponent}
-          >
-            {waitingForOpponent ? "Waiting for opponent..." : "Find Match"}
-          </button>
-          
-          <div className="mt-6 text-center">
-            <span className={`text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-              {isConnected ? 'Connected to server' : 'Disconnected from server'}
-            </span>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

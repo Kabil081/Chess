@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
+  email: { type: String, unique: true, sparse: true },
   password: { type: String, required: true },
   createdAt: { type: Date, default: Date.now },
   gamesPlayed: { type: Number, default: 0 },
@@ -27,7 +28,7 @@ export const connectDB = async () => {
     process.exit(1);
   }
   try {
-    await mongoose.connect(mongoDB, {
+    await mongoose.connect(mongoDB,{
       dbName: "chessdb",
     });
     console.log("✅ Connected to MongoDB Atlas");
@@ -37,21 +38,18 @@ export const connectDB = async () => {
   }
 };
 import bcrypt from 'bcrypt';
-
 export const registerUser = async (username: string, password: string) => {
   try {
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return { success: false, message: 'Username already taken' };
     }
-  
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const newUser = new User({
       username,
       password: hashedPassword
     });
-    
     await newUser.save();
     return { success: true, message: 'User registered successfully' };
   } catch (error) {
@@ -109,8 +107,6 @@ export const saveGameRecord = async (
     return { success: false, message: 'Error saving game record' };
   }
 };
-
-
 const updatePlayerStats = async (whitePlayer: string, blackPlayer: string, result: string) => {
   const whiteUpdate: any = { $inc: { gamesPlayed: 1 } };
   if (result === 'white') whiteUpdate.$inc.wins = 1;
@@ -120,7 +116,6 @@ const updatePlayerStats = async (whitePlayer: string, blackPlayer: string, resul
   if (result === 'black') blackUpdate.$inc.wins = 1;
   else if (result === 'white') blackUpdate.$inc.losses = 1;
   else if (result === 'draw') blackUpdate.$inc.draws = 1;
-  
   await User.updateOne({ username: whitePlayer }, whiteUpdate);
   await User.updateOne({ username: blackPlayer }, blackUpdate);
 };

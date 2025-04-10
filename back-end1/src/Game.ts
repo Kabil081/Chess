@@ -1,13 +1,10 @@
-// Game.ts
 import WebSocket from "ws";
 import { Chess } from "chess.js";
 import { saveGameRecord } from "./Database";
-
 export interface AuthenticatedSocket extends WebSocket {
   username?: string;
   isAuthenticated?: boolean;
 }
-
 export class Game {
     public player1: AuthenticatedSocket;
     public player2: AuthenticatedSocket;
@@ -26,11 +23,7 @@ export class Game {
         this.startTime = new Date();
         this.player1Connected = true;
         this.player2Connected = true;
-        
-        // Initialize game in database
         this.initGameRecord();
-        
-        // Send game initialization message to players
         this.player1.send(JSON.stringify({
             type: "init_game",
             payload: {
@@ -38,7 +31,6 @@ export class Game {
                 opponent: player2.username
             }
         }));
-        
         this.player2.send(JSON.stringify({
             type: "init_game",
             payload: {
