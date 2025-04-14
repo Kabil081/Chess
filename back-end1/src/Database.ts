@@ -38,17 +38,26 @@ export const connectDB = async () => {
   }
 };
 import bcrypt from 'bcrypt';
-export const registerUser = async (username: string, password: string) => {
+export const registerUser = async (username: string, password: string, email?: string) => {
   try {
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return { success: false, message: 'Username already taken' };
     }
+    
+    if (email) {
+      const existingEmail = await User.findOne({ email });
+      if (existingEmail) {
+        return { success: false, message: 'Email already in use' };
+      }
+    }
+    
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const newUser = new User({
       username,
-      password: hashedPassword
+      password: hashedPassword,
+      email
     });
     await newUser.save();
     return { success: true, message: 'User registered successfully' };
@@ -101,7 +110,7 @@ export const saveGameRecord = async (
       await updatePlayerStats(gameData.whitePlayer, gameData.blackPlayer, gameData.result);
     }
 
-    return { success: true, gameId: savedGame._id.toString() }; // ✅ fixed here
+    return { success: true, gameId: savedGame._id.toString() };
   } catch (error) {
     console.error('Error saving game:', error);
     return { success: false, message: 'Error saving game record' };

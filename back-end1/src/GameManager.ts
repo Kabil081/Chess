@@ -1,4 +1,4 @@
-// GameManager.ts
+
 import WebSocket from "ws";
 import { Game, AuthenticatedSocket } from "./Game";
 import { authenticateUser, getPlayerGameHistory } from "./Database";
@@ -28,19 +28,16 @@ export class GameManager {
     private setupSocketHandlers(socket: AuthenticatedSocket): void {
         socket.on("message", async (data) => {
             try {
-                // Parse the incoming message
                 const message = JSON.parse(data.toString());
                 console.log("Received message type:", message.type);
                 
-                // Handle different message types
                 switch (message.type) {
                     case "auth":
                         await this.handleAuthentication(socket, message.username, message.password);
                         break;
                         
                     case "init_game":
-                        // Only allow authenticated users to initiate games
-                        if (socket.isAuthenticated) {
+                        if (socket.isAuthenticated){
                             this.handleInitGame(socket);
                         } else {
                             socket.send(JSON.stringify({
@@ -240,7 +237,6 @@ export class GameManager {
     }
 
     private cleanupGames(): void {
-        // Remove inactive games
         this.games = this.games.filter(game => game.isActive());
     }
     

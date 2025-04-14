@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { register } from './service/Authservice';
 import { Chess } from 'chess.js';
 import { Settings, ChevronDown, Search, Moon, HelpCircle, Trophy, BookOpen } from 'lucide-react';
 const LIGHT_SQUARE = '#EBECD0';
@@ -94,19 +95,6 @@ export default function ChessApp() {
           setIsAuthenticated(false);
         }
         break;
-      
-      case 'signup_response':
-        if (message.success) {
-          console.log('Signup successful!');
-          setIsAuthenticated(true);
-          setAuthError('');
-          setIsSigningUp(false);
-        } else {
-          console.error('Signup failed:', message.message);
-          setAuthError(message.message || 'Signup failed');
-        }
-        break;
-        
       case 'init_game':
         if (message.payload?.color) {
           const color = message.payload.color === 'white' ? 'w' : 'b';
@@ -176,42 +164,46 @@ export default function ChessApp() {
     socketRef.current.send(JSON.stringify(authMessage));
   };
   
-  const handleSignup = (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    
-    // Validate form fields
-    if (!username || !password || !confirmPassword || !email) {
-      setAuthError('All fields are required');
-      return;
-    }
-    
-    // Check if passwords match
+    setAuthError('');
+  
+    // Validate password match
     if (password !== confirmPassword) {
       setAuthError('Passwords do not match');
       return;
     }
-    
-
+  
+    // Validate password length
+    if (password.length < 6) {
+      setAuthError('Password must be at least 6 characters long');
+      return;
+    }
+    if (username.length < 3) {
+      setAuthError('Username must be at least 3 characters long');
+      return;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setAuthError('Please enter a valid email address');
       return;
     }
-    
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setAuthError('Not connected to server. Please try again.');
-      return;
+  
+    try {
+      const response = await register(username, password, email);
+      if (response.success) {
+        setIsAuthenticated(true);
+        setAuthError('');
+        if (response.userData) {
+          localStorage.setItem('chessUser', JSON.stringify(response.userData));
+        }
+      } else {
+        setAuthError(response.message || 'Registration failed');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setAuthError('An unexpected error occurred during registration');
     }
-    
-    const signupMessage = {
-      type: 'signup',
-      username: username,
-      password: password,
-      email: email
-    };
-    
-    console.log('Sending signup request...');
-    socketRef.current.send(JSON.stringify(signupMessage));
   };
   
   const startGame = () => {
@@ -664,7 +656,6 @@ export default function ChessApp() {
               <span className="text-xl">Chess.io</span>
             </div>
           </div>
-          
           <div className="flex flex-col gap-1">
             <NavItem icon={<span className="text-xl">♟</span>} color="amber" label="Play" />
             <NavItem icon={<Trophy size={18} />} color="orange" label="Puzzles" />
@@ -700,8 +691,6 @@ export default function ChessApp() {
           </div>
         </div>
       </div>
-      
-      {/* Main content */}
       <div className="flex-1 flex">
         <div className="flex-1 p-6 flex justify-center items-center bg-gradient-to-br from-gray-900 to-gray-800">
           {isAuthenticated ? (
@@ -714,7 +703,6 @@ export default function ChessApp() {
                 </div>
                 <Settings className="text-gray-400 hover:text-white cursor-pointer transition-colors duration-200" size={22} />
               </div>
-              
               {renderBoard()}
               {renderGameStatus()}
               
@@ -737,7 +725,6 @@ export default function ChessApp() {
                 <span className="text-white font-semibold text-lg">Play Online</span>
               </div>
             </div>
-            
             <div className="mb-6">
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-10 h-10 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">O</div>
@@ -768,7 +755,6 @@ export default function ChessApp() {
                 </div>
               </div>
             </div>
-            
             <div className="bg-gray-700 rounded-md p-4 mb-6 shadow-md">
               <div className="flex justify-between items-center">
                 <span className="text-white font-semibold">Game Status</span>

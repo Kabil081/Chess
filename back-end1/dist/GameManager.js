@@ -35,16 +35,13 @@ class GameManager {
     setupSocketHandlers(socket) {
         socket.on("message", (data) => __awaiter(this, void 0, void 0, function* () {
             try {
-                // Parse the incoming message
                 const message = JSON.parse(data.toString());
                 console.log("Received message type:", message.type);
-                // Handle different message types
                 switch (message.type) {
                     case "auth":
                         yield this.handleAuthentication(socket, message.username, message.password);
                         break;
                     case "init_game":
-                        // Only allow authenticated users to initiate games
                         if (socket.isAuthenticated) {
                             this.handleInitGame(socket);
                         }
@@ -228,7 +225,6 @@ class GameManager {
         return this.games.find(game => game.isPlayerInGame(socket)) || null;
     }
     cleanupGames() {
-        // Remove inactive games
         this.games = this.games.filter(game => game.isActive());
     }
     getActiveGames() {

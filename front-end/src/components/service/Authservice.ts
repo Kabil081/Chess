@@ -25,9 +25,9 @@ export const login = async (username: string, password: string): Promise<AuthRes
   }
 };
 
-export const register = async (username: string, password: string): Promise<AuthResponse> => {
+export const register = async (username: string, password: string, email?: string): Promise<AuthResponse> => {
   try {
-    const response = await axios.post('http://localhost:3001/api/auth/register', { username, password });
+    const response = await axios.post('http://localhost:3001/api/auth/register', { username, password, email });
     return response.data;
   } catch (error: any) {
     if (error.response && error.response.data) {

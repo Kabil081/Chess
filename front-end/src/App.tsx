@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 function App() {
-  const isAuthenticated = (): boolean => {
+  const isAuthenticated = (): boolean =>{
     return localStorage.getItem('chessUser') !== null;
   };
   const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {

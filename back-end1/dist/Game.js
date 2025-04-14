@@ -21,9 +21,7 @@ class Game {
         this.startTime = new Date();
         this.player1Connected = true;
         this.player2Connected = true;
-        // Initialize game in database
         this.initGameRecord();
-        // Send game initialization message to players
         this.player1.send(JSON.stringify({
             type: "init_game",
             payload: {
@@ -73,7 +71,6 @@ class Game {
                             winner: "Black (opponent disconnected)"
                         }
                     }));
-                    // Update game record if both players are authenticated
                     if (this.player1.username && this.player2.username) {
                         yield this.finalizeGameRecord('black');
                     }

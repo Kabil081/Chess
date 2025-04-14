@@ -76,7 +76,7 @@ export class Game {
                         }
                     }));
                     
-                    // Update game record if both players are authenticated
+                    
                     if (this.player1.username && this.player2.username) {
                         await this.finalizeGameRecord('black');
                     }

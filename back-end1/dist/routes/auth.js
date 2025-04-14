@@ -16,13 +16,13 @@ const express_1 = __importDefault(require("express"));
 const Database_1 = require("../Database");
 const router = express_1.default.Router();
 router.route('/register').post((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { username, password } = req.body;
+    const { username, password, email } = req.body;
     if (!username || !password) {
         res.status(400).json({ success: false, message: 'Username and password are required' });
         return;
     }
     try {
-        const result = yield (0, Database_1.registerUser)(username, password);
+        const result = yield (0, Database_1.registerUser)(username, password, email);
         res.json(result);
     }
     catch (error) {

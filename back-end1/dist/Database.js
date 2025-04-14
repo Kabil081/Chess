@@ -55,17 +55,24 @@ const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.connectDB = connectDB;
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const registerUser = (username, password) => __awaiter(void 0, void 0, void 0, function* () {
+const registerUser = (username, password, email) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const existingUser = yield exports.User.findOne({ username });
         if (existingUser) {
             return { success: false, message: 'Username already taken' };
         }
+        if (email) {
+            const existingEmail = yield exports.User.findOne({ email });
+            if (existingEmail) {
+                return { success: false, message: 'Email already in use' };
+            }
+        }
         const salt = yield bcrypt_1.default.genSalt(10);
         const hashedPassword = yield bcrypt_1.default.hash(password, salt);
         const newUser = new exports.User({
             username,
-            password: hashedPassword
+            password: hashedPassword,
+            email
         });
         yield newUser.save();
         return { success: true, message: 'User registered successfully' };
@@ -111,7 +118,7 @@ const saveGameRecord = (gameData) => __awaiter(void 0, void 0, void 0, function*
         if (gameData.result !== 'ongoing') {
             yield updatePlayerStats(gameData.whitePlayer, gameData.blackPlayer, gameData.result);
         }
-        return { success: true, gameId: savedGame._id.toString() }; // ✅ fixed here
+        return { success: true, gameId: savedGame._id.toString() };
     }
     catch (error) {
         console.error('Error saving game:', error);
