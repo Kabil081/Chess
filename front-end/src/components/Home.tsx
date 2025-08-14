@@ -1,30 +1,46 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef} from 'react';
 import { register } from './service/Authservice';
-import { Chess } from 'chess.js';
+import { Chess, Color, PieceSymbol, Square } from 'chess.js';
 import { Settings, ChevronDown, Search, Moon, HelpCircle, Trophy, BookOpen } from 'lucide-react';
+
 const LIGHT_SQUARE = '#EBECD0';
 const DARK_SQUARE = '#739552';
+
+interface Move {
+  from: string;
+  to: string;
+}
+
+interface WebSocketMessage {
+  type: string;
+  success?: boolean;
+  message?: string;
+  payload?: any;
+  opponent?: string;
+}
+
 export default function ChessApp() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [email, setEmail] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authError, setAuthError] = useState('');
-  const [isSigningUp, setIsSigningUp] = useState(false);
-  const [chess, setChess] = useState(new Chess());
-  const [playerColor, setPlayerColor] = useState('w');
-  const [selectedSquare, setSelectedSquare] = useState(null);
-  const [gameStatus, setGameStatus] = useState('waiting');
-  const [gameResult, setGameResult] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [possibleMoves, setPossibleMoves] = useState([]);
-  const [lastMove, setLastMove] = useState(null);
-  const [waitingForOpponent, setWaitingForOpponent] = useState(false);
-  const socketRef = useRef(null);
+  const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const [confirmPassword, setConfirmPassword] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>('');
+  const [isSigningUp, setIsSigningUp] = useState<boolean>(false);
+  const [chess, setChess] = useState<Chess>(new Chess());
+  const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [gameStatus, setGameStatus] = useState<'waiting' | 'playing' | 'gameOver'>('waiting');
+  const [gameResult, setGameResult] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [possibleMoves, setPossibleMoves] = useState<string[]>([]);
+  const [lastMove, setLastMove] = useState<Move | null>(null);
+  const [waitingForOpponent, setWaitingForOpponent] = useState<boolean>(false);
+  const socketRef = useRef<WebSocket | null>(null);
+  
   const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'];
-  const pieceImages = {
+  const pieceImages: { [key: string]: string } = {
     'wp': 'https://assets-themes.chess.com/image/ejgfv/150/wp.png',
     'wn': 'https://assets-themes.chess.com/image/ejgfv/150/wn.png',
     'wb': 'https://assets-themes.chess.com/image/ejgfv/150/wb.png',
@@ -46,7 +62,7 @@ export default function ChessApp() {
         console.log('WebSocket connected');
         setIsConnected(true);
       };
-      socketRef.current.onmessage = (event) => {
+      socketRef.current.onmessage = (event: { data: string; }) => {
         try {
           console.log('Received message:', event.data);
           if (typeof event.data === 'string' && !event.data.startsWith('{')) {
@@ -54,7 +70,7 @@ export default function ChessApp() {
             return;
           }
           
-          const message = JSON.parse(event.data);
+          const message: WebSocketMessage = JSON.parse(event.data);
           handleWebSocketMessage(message);
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -66,7 +82,7 @@ export default function ChessApp() {
         setIsConnected(false);
         setTimeout(connectWebSocket, 3000);
       };
-      socketRef.current.onerror = (error) => {
+      socketRef.current.onerror = (error: any) => {
         console.error('WebSocket error:', error);
       };
     };
@@ -78,7 +94,7 @@ export default function ChessApp() {
     };
   }, []);
   
-  const handleWebSocketMessage = (message) => {
+  const handleWebSocketMessage = (message: WebSocketMessage): void => {
     console.log('Handling message:', message);
     switch (message.type) {
       case 'welcome':
@@ -98,7 +114,7 @@ export default function ChessApp() {
       case 'init_game':
         if (message.payload?.color) {
           const color = message.payload.color === 'white' ? 'w' : 'b';
-          setPlayerColor(color);
+          setPlayerColor(color as 'w' | 'b');
           setGameStatus('playing');
           setWaitingForOpponent(false);
           setChess(new Chess()); 
@@ -141,7 +157,7 @@ export default function ChessApp() {
     }
   };
   
-  const handleLogin = (e) => {
+  const handleLogin = (e: React.FormEvent): void => {
     e.preventDefault();
     
     if (!username || !password) {
@@ -164,17 +180,13 @@ export default function ChessApp() {
     socketRef.current.send(JSON.stringify(authMessage));
   };
   
-  const handleSignup = async (e) => {
+  const handleSignup = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     setAuthError('');
-  
-    // Validate password match
     if (password !== confirmPassword) {
       setAuthError('Passwords do not match');
       return;
     }
-  
-    // Validate password length
     if (password.length < 6) {
       setAuthError('Password must be at least 6 characters long');
       return;
@@ -188,7 +200,6 @@ export default function ChessApp() {
       setAuthError('Please enter a valid email address');
       return;
     }
-  
     try {
       const response = await register(username, password, email);
       if (response.success) {
@@ -204,19 +215,16 @@ export default function ChessApp() {
       console.error('Registration error:', error);
       setAuthError('An unexpected error occurred during registration');
     }
-  };
-  
-  const startGame = () => {
+  };  
+  const startGame = (): void => {
     if (!isAuthenticated) {
       console.error('Must be authenticated to start a game');
       return;
     }
-    
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
       console.error('WebSocket not connected');
       return;
     }
-    
     const message = {
       type: 'init_game'
     };
@@ -230,8 +238,7 @@ export default function ChessApp() {
     setWaitingForOpponent(true);
     console.log('Sent init_game request, waiting for opponent...');
   };
-  
-  const applyMove = (from, to) => {
+  const applyMove = (from: string, to: string): void => {
     setChess((currentChess) => {
       const newChess = new Chess(currentChess.fen());
       try {
@@ -254,21 +261,17 @@ export default function ChessApp() {
           }
           setGameStatus('gameOver');
           setGameResult(result);
-        }
-        
+        } 
         return newChess;
-      } catch (e) {
+      }catch(e){
         console.error('Invalid move:', e);
         return currentChess;
       }
     });
-    
     setPossibleMoves([]);
     setSelectedSquare(null);
   };
-
-  // Send move to server
-  const sendMove = (from, to) => {
+  const sendMove = (from: string, to: string): void => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       const moveMessage = {
         type: 'move',
@@ -277,94 +280,65 @@ export default function ChessApp() {
           to: to
         }
       };
-      
       console.log('Sending move to server:', moveMessage);
       socketRef.current.send(JSON.stringify(moveMessage));
-      
-      // Apply move locally
       applyMove(from, to);
       setLastMove({ from, to });
     } else {
       console.error('WebSocket not connected, cannot send move');
     }
   };
-
-  // Handle square click
-  const handleSquareClick = (square) => {
+  const handleSquareClick = (square: string): void => {
     if (gameStatus !== 'playing' || !playerColor) {
       return;
     }
-    
     const currentTurn = chess.turn();
-    
-    // Only allow moves when it's the player's turn
     if (currentTurn !== playerColor) {
       console.log("Not your turn");
       return;
     }
-    
-    // If a square is already selected
     if (selectedSquare) {
-      // Check if the clicked square is a valid move
-      if (possibleMoves.includes(square)) {
-        // Send move to server
+      if (possibleMoves.includes(square)){
         sendMove(selectedSquare, square);
         return;
       }
-      
-      // If clicked on another piece of the same color, select it instead
-      const piece = chess.get(square);
+      const piece = chess.get(square as Square);
       if (piece && piece.color === playerColor) {
         setSelectedSquare(square);
-        
-        // Get legal moves for this piece using chess.js
         const moves = chess.moves({ 
-          square: square,
+          square: square as Square,
           verbose: true
         });
-        
-        // Extract destination squares
-        const legalMoves = moves.map(move => move.to);
+        const legalMoves = moves.map((move: any) => move.to);
         setPossibleMoves(legalMoves);
         return;
       }
-      
-      // Otherwise, clear selection
       setSelectedSquare(null);
       setPossibleMoves([]);
       return;
     }
-    
-    // Get the piece at the square
-    const piece = chess.get(square);
-    
-    // If piece belongs to the player, select it and show possible moves
+    const piece = chess.get(square as Square);
     if (piece && piece.color === playerColor) {
       setSelectedSquare(square);
-      
-      // Get legal moves for this piece using chess.js
       const moves = chess.moves({ 
-        square: square,
+        square: square as Square,
         verbose: true
       });
-      
-      // Extract destination squares
-      const legalMoves = moves.map(move => move.to);
+      const legalMoves = moves.map((move: any) => move.to);
       setPossibleMoves(legalMoves);
-    } else {
-      // Clear selection
+    } else{
       setSelectedSquare(null);
       setPossibleMoves([]);
     }
   };
 
-  const getPiece = (square) => {
-    const piece = chess.get(square);
+  const getPiece = (square: string) => {
+    const piece = chess.get(square as Square);
     if (!piece) return null;
     return { type: piece.type, color: piece.color };
   };
 
-  const renderPiece = (piece) => {
+  const renderPiece = (piece: { type: PieceSymbol; color: Color; } | null) => {
     if (!piece) return null;
     
     const pieceKey = piece.color + piece.type;
@@ -589,17 +563,14 @@ export default function ChessApp() {
                       <div className="w-3 h-3 rounded-full bg-gray-800 opacity-30"></div>
                     </div>
                   )}
-                  
                   {isPossibleMove && piece && (
                     <div className="absolute inset-0 border-2 border-red-500 rounded-md"></div>
                   )}
-                  
                   {fileIndex === 0 && (
                     <div className="absolute left-1 top-1 text-xs font-bold opacity-70">
                       {rank}
                     </div>
                   )}
-                  
                   {rankIndex === 7 && (
                     <div className="absolute right-1 bottom-1 text-xs font-bold opacity-70">
                       {file}
@@ -613,7 +584,6 @@ export default function ChessApp() {
       </div>
     );
   };
-  
   const renderGameStatus = () => {
     if (gameStatus === 'waiting' || waitingForOpponent) {
       return (
@@ -638,8 +608,7 @@ export default function ChessApp() {
     }
     return null;
   };
-  
-  const NavItem = ({ icon, color, label }) => (
+  const NavItem = ({ icon, color, label }: { icon: React.ReactNode; color: string; label: string }) => (
     <div className={`flex items-center gap-3 p-3 hover:bg-gray-700 rounded-md transition-colors duration-200 cursor-pointer ${label === 'Play' ? 'bg-gray-700' : ''}`}>
       <div className={`text-${color}-500`}>{icon}</div>
       <span className="text-white font-medium">{label}</span>

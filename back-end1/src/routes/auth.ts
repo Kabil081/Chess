@@ -3,11 +3,11 @@ import { registerUser, authenticateUser } from '../Database';
 const router = express.Router();
 router.route('/register').post(async (req: Request, res: Response): Promise<void> => {
   const { username, password, email } = req.body;
-  if (!username || !password){
+  if(!username || !password){
     res.status(400).json({ success: false, message: 'Username and password are required' });
     return;
   }
-  try {
+  try{
     const result = await registerUser(username, password, email);
     res.json(result);
   } catch (error) {

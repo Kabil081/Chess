@@ -1,35 +1,26 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface LoginProps {
   username: string;
   setUsername: (username: string) => void;
   password: string;
   setPassword: (password: string) => void;
-  authError: string;
+  authError: string | null;
   isConnected: boolean;
-  handleLogin: (e: React.FormEvent) => void;
+  handleLogin: (e: React.FormEvent<HTMLFormElement>) => void;
   toggleAuthMode: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({
-  username,
-  setUsername,
-  password,
-  setPassword,
-  authError,
-  isConnected,
-  handleLogin,
-  toggleAuthMode
+const LoginPage: React.FC<LoginProps> = ({ 
+  username, 
+  setUsername, 
+  password, 
+  setPassword, 
+  authError, 
+  isConnected, 
+  handleLogin, 
+  toggleAuthMode 
 }) => {
-  const [loading, setLoading] = useState(false);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    await handleLogin(e);
-    setLoading(false);
-  };
-
   return (
     <div className="bg-gray-700 p-6 rounded-lg shadow-lg w-96">
       <h2 className="text-white text-2xl font-bold mb-6 text-center">Login to Chess.io</h2>
@@ -40,13 +31,13 @@ const Login: React.FC<LoginProps> = ({
         </div>
       )}
       
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-gray-300 mb-1">Username</label>
           <input 
             type="text" 
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
             className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="Enter your username"
           />
@@ -57,7 +48,7 @@ const Login: React.FC<LoginProps> = ({
           <input 
             type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             className="w-full bg-gray-800 text-white p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="••••••••"
           />
@@ -65,12 +56,9 @@ const Login: React.FC<LoginProps> = ({
         
         <button 
           type="submit"
-          className={`w-full p-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors duration-200 ${
-            loading ? 'opacity-70 cursor-not-allowed' : ''
-          }`}
-          disabled={loading}
+          className="w-full p-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-md transition-colors duration-200"
         >
-          {loading ? 'Logging in...' : 'Login'}
+          Login
         </button>
       </form>
       
@@ -94,4 +82,4 @@ const Login: React.FC<LoginProps> = ({
   );
 };
 
-export default Login;
+export default LoginPage;
