@@ -23,7 +23,7 @@ export const User = mongoose.model('User', userSchema);
 export const GameRecord = mongoose.model('Game', gameSchema);
 export const connectDB = async () => {
   const mongoDB = process.env.MONGODB_URI;
-  if (!mongoDB) {
+  if (!mongoDB){
     console.error("❌ MONGODB_URI not found in .env");
     process.exit(1);
   }

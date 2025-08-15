@@ -15,7 +15,7 @@ export interface AuthResponse {
 
 export const login = async (username: string, password: string): Promise<AuthResponse> => {
   try {
-    const response = await axios.post('https://chess-back-end.vercel.app/api/auth/login', { username, password });
+    const response = await axios.post('https://chess-back-end-jqc2.onrender.com/api/auth/login', { username, password });
     return response.data;
   } catch (error: any) {
     if (error.response && error.response.data) {
@@ -27,7 +27,7 @@ export const login = async (username: string, password: string): Promise<AuthRes
 
 export const register = async (username: string, password: string, email?: string): Promise<AuthResponse> => {
   try {
-    const response = await axios.post('https://chess-back-end.vercel.app/api/auth/register', { username, password, email });
+    const response = await axios.post('https://chess-back-end-jqc2.onrender.com/api/auth/register', { username, password, email });
     return response.data;
   } catch (error: any) {
     if (error.response && error.response.data) {
