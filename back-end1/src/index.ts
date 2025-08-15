@@ -1,5 +1,6 @@
 import express from 'express';
 import { WebSocketServer } from 'ws';
+import { createServer } from 'http';
 import { GameManager } from './GameManager';
 import { connectDB, registerUser } from './Database';
 import dotenv from 'dotenv';
@@ -9,7 +10,7 @@ const app = express();
 import cors from 'cors';
 app.use(cors(
   {
-      origin:["https://chess-front-end.vercel.app/"],
+      origin:["https://chess-front-end.vercel.app"],
       methods:["POST","GET"],
       credentials:true
   }
@@ -18,7 +19,13 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 connectDB();
-const wss = new WebSocketServer({ port: 8080 });
+
+// Create HTTP server
+const server = createServer(app);
+
+// Create WebSocket server attached to the HTTP server
+const wss = new WebSocketServer({ server });
+
 const gameManager = new GameManager();
 const initializeAdminUser = async () => {
   try {
@@ -32,8 +39,10 @@ const initializeAdminUser = async () => {
     console.error('Error creating admin user:', error);
   }
 };
-app.listen(PORT, () => {
-  console.log(`API server running on port ${PORT}`);
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT} (HTTP + WebSocket)`);
 });
 
 const initServer = async () => {
@@ -47,7 +56,7 @@ const initServer = async () => {
       gameManager.removeUser(ws);
     });
   });
-  console.log('Chess WebSocket server started on port 8080');
+  console.log('Chess WebSocket server started on the same port as HTTP server');
   setInterval(() => {
     const activeGames = gameManager.getActiveGames();
     const waitingUsers = gameManager.getWaitingUsers();

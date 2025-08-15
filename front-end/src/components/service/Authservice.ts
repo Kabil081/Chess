@@ -1,5 +1,5 @@
 import axios from 'axios';
-export interface UserData {
+export interface UserData{
   username: string;
   gamesPlayed: number;
   wins: number;
@@ -7,13 +7,13 @@ export interface UserData {
   draws: number;
 }
 
-export interface AuthResponse {
+export interface AuthResponse{
   success: boolean;
   message: string;
   userData?: UserData;
 }
 
-export const login = async (username: string, password: string): Promise<AuthResponse> => {
+export const login = async (username: string, password: string): Promise<AuthResponse> =>{
   try {
     const response = await axios.post('https://chess-back-end-jqc2.onrender.com/api/auth/login', { username, password });
     return response.data;
@@ -30,7 +30,7 @@ export const register = async (username: string, password: string, email?: strin
     const response = await axios.post('https://chess-back-end-jqc2.onrender.com/api/auth/register', { username, password, email });
     return response.data;
   } catch (error: any) {
-    if (error.response && error.response.data) {
+    if (error.response && error.response.data){
       return error.response.data;
     }
     return { success: false, message: 'Network error. Please try again.' };
