@@ -3,8 +3,7 @@ import { Chess, Color, PieceSymbol, Square } from 'chess.js';
 import { Settings } from 'lucide-react';
 const LIGHT_SQUARE = '#EBECD0';
 const DARK_SQUARE = '#739552';
-
-interface MainBoardProps {
+interface MainBoardProps{
   username: string;
   chess: Chess;
   playerColor: 'w' | 'b';
@@ -16,7 +15,6 @@ interface MainBoardProps {
   waitingForOpponent: boolean;
   handleSquareClick: (square: string) => void;
 }
-
 const MainBoard: React.FC<MainBoardProps> = ({
   username,
   chess,
@@ -31,7 +29,6 @@ const MainBoard: React.FC<MainBoardProps> = ({
 }) => {
   const fileLabels = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
   const rankLabels = ['8', '7', '6', '5', '4', '3', '2', '1'];
-  
   const pieceImages: { [key: string]: string } = {
     'wp': 'https://assets-themes.chess.com/image/ejgfv/150/wp.png',
     'wn': 'https://assets-themes.chess.com/image/ejgfv/150/wn.png',

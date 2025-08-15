@@ -22,8 +22,7 @@ router.route('/login').post(async (req: Request, res: Response): Promise<void> =
     res.status(400).json({ success: false, message: 'Username and password are required' });
     return;
   }
-
-  try {
+  try{
     const result = await authenticateUser(username, password);
     res.json(result);
   } catch (error) {

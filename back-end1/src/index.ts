@@ -7,7 +7,13 @@ import authRoutes from './routes/auth';
 dotenv.config();
 const app = express();
 import cors from 'cors';
-app.use(cors());
+app.use(cors(
+  {
+    origin:"https://chess-fmjo4w97c-231001081-8983s-projects.vercel.app/",
+    methods:["POST","GET"],
+    credentials:true
+  }
+));
 const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use('/api/auth', authRoutes);
