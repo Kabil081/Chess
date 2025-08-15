@@ -39,7 +39,7 @@ export default function ChessApp(): JSX.Element {
   
   useEffect(() => {
     const connectWebSocket = () => {
-      socketRef.current = new WebSocket('ws://localhost:8080');
+      socketRef.current = new WebSocket('wss://chess-back-end.vercel.app');
       socketRef.current.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
