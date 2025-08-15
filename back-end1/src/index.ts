@@ -9,7 +9,7 @@ const app = express();
 import cors from 'cors';
 app.use(cors(
   {
-      origin:["chess-fmjo4w97c-231001081-8983s-projects.vercel.app"],
+      origin:["https://chess-fmjo4w97c-231001081-8983s-projects.vercel.app/"],
       method:["POST","GET"],
       credentials:true
   }
