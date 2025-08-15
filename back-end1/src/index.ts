@@ -9,15 +9,9 @@ const app = express();
 import cors from 'cors';
 app.use(cors(
   {
-<<<<<<< HEAD
-    origin:"https://chess-fmjo4w97c-231001081-8983s-projects.vercel.app/",
-    methods:["POST","GET"],
-    credentials:true
-=======
       origin:["https://chess-fmjo4w97c-231001081-8983s-projects.vercel.app/"],
-      method:["POST","GET"],
+      methods:["POST","GET"],
       credentials:true
->>>>>>> a3ea61625275e083163bf224c75d3c18159bc0e1
   }
 ));
 const PORT = process.env.PORT || 3001;
