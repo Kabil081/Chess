@@ -68,3 +68,7 @@ initServer().catch(error => {
   console.error('Server initialization failed:', error);
   process.exit(1);
 });
+
+app.get("/",(req,res)=>{
+  res.send("Server running Successfully!");
+})

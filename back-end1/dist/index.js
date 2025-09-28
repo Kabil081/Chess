@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const ws_1 = require("ws");
+const http_1 = require("http");
 const GameManager_1 = require("./GameManager");
 const Database_1 = require("./Database");
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -21,12 +22,19 @@ const auth_1 = __importDefault(require("./routes/auth"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const cors_1 = __importDefault(require("cors"));
-app.use((0, cors_1.default)());
+app.use((0, cors_1.default)({
+    origin: ["https://chess-front-end.vercel.app"],
+    methods: ["POST", "GET"],
+    credentials: true
+}));
 const PORT = process.env.PORT || 3001;
 app.use(express_1.default.json());
 app.use('/api/auth', auth_1.default);
 (0, Database_1.connectDB)();
-const wss = new ws_1.WebSocketServer({ port: 8080 });
+// Create HTTP server
+const server = (0, http_1.createServer)(app);
+// Create WebSocket server attached to the HTTP server
+const wss = new ws_1.WebSocketServer({ server });
 const gameManager = new GameManager_1.GameManager();
 const initializeAdminUser = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -42,8 +50,9 @@ const initializeAdminUser = () => __awaiter(void 0, void 0, void 0, function* ()
         console.error('Error creating admin user:', error);
     }
 });
-app.listen(PORT, () => {
-    console.log(`API server running on port ${PORT}`);
+// Start the server
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT} (HTTP + WebSocket)`);
 });
 const initServer = () => __awaiter(void 0, void 0, void 0, function* () {
     yield initializeAdminUser();
@@ -55,7 +64,7 @@ const initServer = () => __awaiter(void 0, void 0, void 0, function* () {
             gameManager.removeUser(ws);
         });
     });
-    console.log('Chess WebSocket server started on port 8080');
+    console.log('Chess WebSocket server started on the same port as HTTP server');
     setInterval(() => {
         const activeGames = gameManager.getActiveGames();
         const waitingUsers = gameManager.getWaitingUsers();
