@@ -1,0 +1,8 @@
+FROM node:20-alphine
+
+COPY package*.json
+
+run npm install
+
+COPY . .
+
